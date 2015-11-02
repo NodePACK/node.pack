@@ -26,6 +26,14 @@ function init {
         return 1;
 	}
 
+	function git_assertRemote {
+		BO_log "$VERBOSE" "Ensuring remote '$1' exists for git working directory '$(pwd)' ..."
+	    if [[ $(git remote show "$1" 2>&1 | grep fatal) != "" ]]; then
+	        echo "ERROR: Aborting. '$1' git remote not configured for working directory '$(pwd)'!"
+	        echo "Action: Run 'git remote add $1 <GitURL>"
+	        exit 1;
+        fi
+    }
 
     function git_getBranch {
 		BO_setResult "$1" "$(git symbolic-ref --short HEAD)"

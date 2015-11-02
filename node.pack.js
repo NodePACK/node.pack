@@ -2,7 +2,7 @@
 
 
 var LIB = {
-    VERBOSE: true,
+    VERBOSE: false,
     assert: require("assert"),
     path: require("path"),
     fs: require("fs-extra"),
@@ -28,27 +28,28 @@ function log () {
 }
 
 
+function loadDescriptor (packageDirectory) {
+    var path = LIB.path.join(packageDirectory, "package.json");
+    log("Load descriptor from '" + path + "'");
+    return LIB.fs.readJsonAsync(path).then(function (descriptor) {
+        descriptor._path = path;
+
+        LIB.assert.notEqual(typeof descriptor["name"], "undefined", "'name' property must be set in '" + descriptor._path + "'");
+        LIB.assert.notEqual(typeof descriptor["version"], "undefined", "'version' property must be set in '" + descriptor._path + "'");
+        LIB.assert.equal(typeof descriptor["node.pack"], "object", "'node.pack' property must be set in '" + descriptor._path + "'");
+        LIB.assert.equal(typeof descriptor["node.pack"].packs, "object", "'[\"node.pack\"].packs' property must be set in '" + descriptor._path + "'");
+
+        descriptor["node.pack"].packDirectory = descriptor["node.pack"].packDirectory || ".packs";
+
+        return descriptor;
+    });
+}
+
 
 module.exports = function (packageDirectory) {
 
-    function loadDescriptor () {
-        var path = LIB.path.join(packageDirectory, "package.json");
-        log("Load descriptor from '" + path + "'");
-        return LIB.fs.readJsonAsync(path).then(function (descriptor) {
-            descriptor._path = path;
-            return descriptor;
-        });
-    }
-
     function forEachConfiguredPack (handler) {
-        return loadDescriptor().then(function (descriptor) {
-
-            LIB.assert.notEqual(typeof descriptor["name"], "undefined", "'name' property must be set in '" + descriptor._path + "'");
-            LIB.assert.notEqual(typeof descriptor["version"], "undefined", "'version' property must be set in '" + descriptor._path + "'");
-            LIB.assert.equal(typeof descriptor["node.pack"], "object", "'node.pack' property must be set in '" + descriptor._path + "'");
-            LIB.assert.equal(typeof descriptor["node.pack"].packs, "object", "'[\"node.pack\"].packs' property must be set in '" + descriptor._path + "'");
-
-            descriptor["node.pack"].packDirectory = descriptor["node.pack"].packDirectory || ".packs";
+        return loadDescriptor(packageDirectory).then(function (descriptor) {
 
             // TODO: Take depends order into account.
             return LIB.Promise.all(Object.keys(descriptor["node.pack"].packs).map(function (packName) {
@@ -67,6 +68,9 @@ module.exports = function (packageDirectory) {
 
     function loadPacker (pointer) {
         var relpath = pointer + "/packer.js";
+        if (/^node\.pack\//.test(relpath)) {
+            relpath = LIB.path.join(__dirname, "..", relpath);
+        }
         log("Load packer for pointer '" + pointer + "' from path '" + require.resolve(relpath) + "'");
         if (!loadPacker._instances) {
             loadPacker._instances = {};
@@ -139,17 +143,30 @@ module.exports = function (packageDirectory) {
 
 
 if (require.main === module) {
-    module.exports(
-        process.cwd()
-    ).then(function () {
-        log("Success");
-        process.exit(0);
-        return;
-    }).catch(function (err) {
+
+    function error (err) {
         log("ERROR");
         console.error(err.stack);
         process.exit(1);
         return;
-    });
+    }
+
+    if (process.argv.indexOf("--inline-source-stream-dirpath") !== -1) {
+        loadDescriptor(process.cwd()).then(function (descriptor) {
+            process.stdout.write(LIB.path.join(process.cwd(), descriptor["node.pack"].packDirectory, [
+                descriptor.name,
+                "inline",
+                "source.stream"
+            ].join("~")));
+        }).catch(error)
+    } else {
+        module.exports(
+            process.cwd()
+        ).then(function () {
+            log("Success");
+            process.exit(0);
+            return;
+        }).catch(error);
+    }
 }
 

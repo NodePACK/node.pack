@@ -132,7 +132,7 @@ exports.forLIB = function (LIB) {
                 function mergeChanges () {
                     var commands = [
         			    'VERBOSE="1"',
-        				'. ' + LIB.path.join(__dirname, "packer.sh"),
+        				'. ' + LIB.path.join(__dirname, "packer.proto.sh"),
         				'git_exitOnDirtyWorking',
         				'git_getBranch "BRANCH"',
         				'git_getTag "TAG"',
@@ -186,7 +186,7 @@ exports.forLIB = function (LIB) {
                     ).then(function () {
                         return LIB.util.runCommands([
                             'VERBOSE="1"',
-            				'. ' + LIB.path.join(__dirname, "packer.sh"),
+            				'. ' + LIB.path.join(__dirname, "packer.proto.sh"),
             				'git_commitChanges "NodePACK source stream descriptor"'
                         ], {
                 		    cwd: sourceStreamDirpath,
@@ -198,7 +198,7 @@ exports.forLIB = function (LIB) {
                 function publishStream (branch) {
                     return LIB.util.runCommands([
                         'VERBOSE="1"',
-        				'. ' + LIB.path.join(__dirname, "packer.sh"),
+        				'. ' + LIB.path.join(__dirname, "packer.proto.sh"),
         				'git push origin ' + branch
                     ], {
             		    cwd: sourceStreamDirpath,
@@ -245,13 +245,13 @@ exports.forLIB = function (LIB) {
                 function mergeChanges () {
                     var commands = [
                         'VERBOSE="1"',
-        				'. ' + LIB.path.join(__dirname, "packer.sh"),
+        				'. ' + LIB.path.join(__dirname, "packer.proto.sh"),
             			'git_ensureSyncedBranch "' + buildStream + '"',
             			'git_mergeFromBranch "' + info.sourceStream + '"',
         				'git push origin ' + buildStream,
             			// Remove git ignore file
             			'rm .gitignore > /dev/null || true',
-            			'git .gitignore > /dev/null || true'
+            			'git rm .gitignore > /dev/null || true'
                     ];
                     Object.keys(info.submodules).forEach(function (path) {
                         var targetPath = LIB.path.join(sourceStreamDirpath, path, "..");
@@ -281,7 +281,7 @@ exports.forLIB = function (LIB) {
                 function publishStream (branch) {
                     return LIB.util.runCommands([
                         'VERBOSE="1"',
-        				'. ' + LIB.path.join(__dirname, "packer.sh"),
+        				'. ' + LIB.path.join(__dirname, "packer.proto.sh"),
         				'git push origin ' + branch
                     ], {
             		    cwd: sourceStreamDirpath,
