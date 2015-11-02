@@ -7,6 +7,8 @@ This means you take [npm](http://npmjs.org) and other package registries out of 
 
 `node.pack` empowers you to create multiple *packs* from the same installation so you can put infrequently changing third party packages into one *pack* and your own code into another *pack*.
 
+`node.pack` also creates *NodePACK build stream* branches which have all submodule source code inlined and contain `node.pack.json` descriptors with pointers to packs for runtime installation.
+
 **Origin:** This project stems from work I have been doing for [sm.genesis](https://github.com/sourcemint/sm.genesis) and serves to validate the *filename format* and *built package bundles* for reliable runtime code distribution.
 
 
