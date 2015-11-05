@@ -24,36 +24,44 @@ exports.forLIB = function (LIB) {
             function scanSourceSubmodules () {
     
                 function findSubmodules () {
+
+                    var submodules = {};
+
+        		    return LIB.fs.existsAsync(
+        		        LIB.path.join(rootPath, ".gitmodules")
+        		    ).then(function (exists) {
+        		        if (!exists) {
+        		            return submodules;
+        		        }
+            		    return LIB.fs.readFileAsync(
+            		        LIB.path.join(rootPath, ".gitmodules"),
+            		        "utf8"
+            		    ).then(function (data) {
     
-        		    return LIB.fs.readFileAsync(
-        		        LIB.path.join(rootPath, ".gitmodules"),
-        		        "utf8"
-        		    ).then(function (data) {
-                        var submodules = {};
-                        
-                        function memoizeSubmodule () {
-                            if (!currentSubmodule) return;
-        					submodules["/" + currentSubmodule.path] = {
-        						url: currentSubmodule.url
-        					};
-                        }
-                        
-        				var lines = data.split("\n");
-        				var currentSubmodule = null;
-        				for (var i=0, l=lines.length ; i<l ; i++) {
-        					var m = lines[i].match(/^\[submodule "([^"]+)"\]$/);
-        					if (m) {
-        					    memoizeSubmodule();
-        						currentSubmodule = {};
-        					} else {
-        						m = lines[i].match(/^\s*([\S]+)\s*=\s*([\S]+)\s*$/);
-        						if (m) {
-        							currentSubmodule[m[1]] = m[2];
-        						}
-        					}
-        				}
-    				    memoizeSubmodule();
-                        return submodules;
+                            function memoizeSubmodule () {
+                                if (!currentSubmodule) return;
+            					submodules["/" + currentSubmodule.path] = {
+            						url: currentSubmodule.url
+            					};
+                            }
+                            
+            				var lines = data.split("\n");
+            				var currentSubmodule = null;
+            				for (var i=0, l=lines.length ; i<l ; i++) {
+            					var m = lines[i].match(/^\[submodule "([^"]+)"\]$/);
+            					if (m) {
+            					    memoizeSubmodule();
+            						currentSubmodule = {};
+            					} else {
+            						m = lines[i].match(/^\s*([\S]+)\s*=\s*([\S]+)\s*$/);
+            						if (m) {
+            							currentSubmodule[m[1]] = m[2];
+            						}
+            					}
+            				}
+        				    memoizeSubmodule();
+                            return submodules;
+            		    });
         		    });
         		}
         		
