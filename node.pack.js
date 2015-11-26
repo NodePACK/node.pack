@@ -1,36 +1,11 @@
 #!/usr/bin/env node
 
-
-var LIB = {
-    VERBOSE: false,
-    assert: require("assert"),
-    path: require("path"),
-    fs: require("fs-extra"),
-    _: require("lodash"),
-    CJSON: require("canonical-json"),
-    Promise: require("bluebird"),
-    child_process: require("child_process")
-};
-LIB.util = require("./util").forLib(LIB);
-LIB.Promise.promisifyAll(LIB.fs);
-LIB.fs.existsAsync = function (path) {
-    return new LIB.Promise(function (resolve, reject) {
-        return LIB.fs.exists(path, resolve);
-    });
-}
-
-
-function log () {
-    if (!LIB.VERBOSE) return;
-    var args = Array.prototype.slice.call(arguments);
-    args.unshift("[node.pack]");
-    console.log.apply(console, args);
-}
+const LIB = require("./lib");
 
 
 function loadDescriptor (packageDirectory) {
     var path = LIB.path.join(packageDirectory, "package.json");
-    log("Load descriptor from '" + path + "'");
+    LIB.log("Load descriptor from '" + path + "'");
     return LIB.fs.readJsonAsync(path).then(function (descriptor) {
         descriptor._path = path;
 
@@ -46,13 +21,18 @@ function loadDescriptor (packageDirectory) {
 }
 
 
-module.exports = function (packageDirectory) {
+module.exports = function (packageDirectory, limitToPack, mode) {
 
     function forEachConfiguredPack (handler) {
         return loadDescriptor(packageDirectory).then(function (descriptor) {
 
             // TODO: Take depends order into account.
             return LIB.Promise.all(Object.keys(descriptor["node.pack"].packs).map(function (packName) {
+                if (
+                    limitToPack &&
+                    packName !== limitToPack
+                ) return;
+
                 var config = LIB._.clone(descriptor["node.pack"].packs[packName]);
                 LIB._.assign(config, {
                     packDirectory: LIB.path.join(packageDirectory, config.packDirectory || descriptor["node.pack"].packDirectory),
@@ -66,21 +46,21 @@ module.exports = function (packageDirectory) {
         });    
     }
 
-    function loadPacker (pointer) {
-        var relpath = pointer + "/packer.js";
+    function loadAdapterModule (pointer, type) {
+        var relpath = pointer + "/" + type + ".js";
         if (/^node\.pack\//.test(relpath)) {
             relpath = LIB.path.join(__dirname, "..", relpath);
         }
-        log("Load packer for pointer '" + pointer + "' from path '" + require.resolve(relpath) + "'");
-        if (!loadPacker._instances) {
-            loadPacker._instances = {};
+        LIB.log("Load " + type + " for pointer '" + pointer + "' from path '" + require.resolve(relpath) + "'");
+        if (!loadAdapterModule._instances) {
+            loadAdapterModule._instances = {};
         }
-        if (!loadPacker._instances[relpath]) {
-            loadPacker._instances[relpath] = LIB.Promise.resolve(
+        if (!loadAdapterModule._instances[relpath]) {
+            loadAdapterModule._instances[relpath] = LIB.Promise.resolve(
                 require(relpath).forLIB(LIB)
             );
         }
-        return loadPacker._instances[relpath];
+        return loadAdapterModule._instances[relpath];
     }
 
 
@@ -115,43 +95,133 @@ module.exports = function (packageDirectory) {
             return packageDirectory;
         }
 
+        function resolveConfig (config) {
+            config = JSON.stringify(config, null, 4);
+            var re = /\{\{(!)?(?:env|ENV)\.([^\}]+)\}\}/g;
+            var m;
+            while (m = re.exec(config)) {
+                config = config.replace(
+                    new RegExp(m[0], "g"),
+                    process.env[m[2]] || ""
+                );
+            }
+            return JSON.parse(config);
+        }
+
         self.getPackerConfig = function () {
-            return packConfig.packer.config || {};
+            return resolveConfig((packConfig.packer && packConfig.packer.config) || {});
         }
 
         self.getSyncerConfig = function () {
-            return (packConfig.syncer && packConfig.syncer.config) || {};
+            return resolveConfig((packConfig.syncer && packConfig.syncer.config) || {});
         }
     }
 
     return forEachConfiguredPack(function (packName, packConfig) {
 
-        LIB.assert.equal(typeof packConfig.packer, "object", "'packer' property must be set in config for pack '" + packName + "'");
-        LIB.assert.equal(typeof packConfig.packer.module, "string", "'packer.module' property must be set in config for pack '" + packName + "'");
+        function initSyncer () {
+            if (!packConfig.syncer) {
+                return LIB.Promise.resolve(null);
+            }
+            LIB.assert.equal(typeof packConfig.syncer.module, "string", "'syncer.module' property must be set in config for pack '" + packName + "'");
+            return loadAdapterModule(packConfig.syncer.module, "syncer").then(function (syncer) {
+                var pack = new Pack(packName, packConfig);
+                LIB.log("Init syncer '" + packConfig.syncer.module + "' for pack '" + packName + "'");
+                return syncer(pack);
+            });
+        }
 
-        return loadPacker(packConfig.packer.module).then(function (packer) {
+        function initPacker () {
+            if (!packConfig.packer) {
+                return LIB.Promise.resolve(null);
+            }
+            LIB.assert.equal(typeof packConfig.packer.module, "string", "'packer.module' property must be set in config for pack '" + packName + "'");
+            return loadAdapterModule(packConfig.packer.module, "packer").then(function (packer) {
+                var pack = new Pack(packName, packConfig);
+                LIB.log("Init packer '" + packConfig.packer.module + "' for pack '" + packName + "'");
+                return packer(pack);
+            });
+        }
 
-            var pack = new Pack(packName, packConfig);
+        return initPacker().then(function (packer) {
 
-            log("Run packer '" + packConfig.packer.module + "' for pack '" + packName + "' and config:", packConfig);
+            return initSyncer().then(function (syncer) {
 
-            return packer(pack);
+                if (mode === "pack") {
+                    // If the pack exists remotely we do not pack it again locally.
+                    // TODO: Add option to pack it anyway.
+                    return LIB.Promise.try(function () {
+                        if (!syncer) return false;
+                        return syncer.exists();
+                    }).then(function (exists) {
+                        if (exists) {
+                            LIB.log("Skip running packer '" + packConfig.packer.module + "' and syncer for pack '" + packName + "' as remote packs already exist.");
+                            return;
+                        }
+                        return packer.pack().then(function () {
+                            if (!syncer) return;
+                            return syncer.upload();
+                        });
+                    });
+                } else
+                if (mode === "unpack") {
+                    return LIB.Promise.try(function () {
+                        if (!packer) throw new Error("'packer' must be delcared for pack '" + packName + "'");
+                        return packer.exists();
+                    }).then(function (exists) {
+                        if (exists) {
+                            LIB.log("Skip running syncer for pack '" + packName + "' as local packs already exist.");
+                            return;
+                        }
+                        return syncer.download();
+                    }).then(function () {
+
+console.log("TODO: extract!");
+
+
+                    });
+/*
+                    return existsRemote().then(function (exists) {
+                        if (!exists) {
+                            LIB.log("Skip running syncer and unpack '" + packConfig.packer.module + "' for pack '" + packName + "' as remote pack does not exist.");
+                            return;
+                        }
+                        return ensureLocal().then(function (exists) {
+*/                        
+                        
+    
+                    
+    console.log("UNPACK!");
+    
+    
+//                    });
+    
+                } else {
+                    throw new Error("Mode '" + mode + "' not supported!");
+                }
+            });
         });
     });
 }
 
 
-
 if (require.main === module) {
 
     function error (err) {
-        log("ERROR");
+        LIB.log("ERROR");
         console.error(err.stack);
         process.exit(1);
         return;
     }
 
-    if (process.argv.indexOf("--inline-source-stream-dirpath") !== -1) {
+    var argv = LIB.minimist(process.argv.slice(2));
+
+    if (argv["verbose"]) {
+        process.env.VERBOSE = "1";
+        LIB.VERBOSE = true;
+    }
+
+    if (argv["inline-source-stream-dirpath"]) {
         loadDescriptor(process.cwd()).then(function (descriptor) {
             process.stdout.write(LIB.path.join(process.cwd(), descriptor["node.pack"].packDirectory, [
                 descriptor.name,
@@ -161,9 +231,11 @@ if (require.main === module) {
         }).catch(error)
     } else {
         module.exports(
-            process.cwd()
+            process.cwd(),
+            argv._[0] || "",
+            argv["unpack"] ? "unpack" : "pack"
         ).then(function () {
-            log("Success");
+            LIB.log("Success");
             process.exit(0);
             return;
         }).catch(error);

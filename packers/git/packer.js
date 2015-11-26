@@ -239,72 +239,77 @@ exports.forLIB = function (LIB) {
 
     return function (pack) {
         
-        return packCommon(pack).then(function (info) {
+        return {
+            pack: function () {
 
-            var config = pack.getPackerConfig();
-            var sourceStreamDirpath = pack.getSourceStreamDirpath();
-            var packName = pack.getName();
-            var buildStream = info.sourceStream + "." + packName;
+                return packCommon(pack).then(function (info) {
 
-            // TODO: Deal with `config.ignoreSubmodules`
-
-            function deriveNodePackBuildStream () {
-                
-                function mergeChanges () {
-                    var commands = [
-                        'VERBOSE="1"',
-        				'. ' + LIB.path.join(__dirname, "packer.proto.sh"),
-            			'git_ensureSyncedBranch "' + buildStream + '"',
-            			'git_mergeFromBranch "' + info.sourceStream + '"',
-        				'git push origin ' + buildStream,
-            			// Remove git ignore file
-            			'rm .gitignore > /dev/null || true',
-            			'git rm .gitignore > /dev/null || true'
-                    ];
-                    Object.keys(info.submodules).forEach(function (path) {
-                        var targetPath = LIB.path.join(sourceStreamDirpath, path, "..");
-                        if (!LIB.fs.existsSync(targetPath)) {
-                            LIB.fs.mkdirsSync(targetPath);
+                    var config = pack.getPackerConfig();
+                    var sourceStreamDirpath = pack.getSourceStreamDirpath();
+                    var packName = pack.getName();
+                    var buildStream = info.sourceStream + "." + packName;
+        
+                    // TODO: Deal with `config.ignoreSubmodules`
+        
+                    function deriveNodePackBuildStream () {
+                        
+                        function mergeChanges () {
+                            var commands = [
+                                'VERBOSE="1"',
+                				'. ' + LIB.path.join(__dirname, "packer.proto.sh"),
+                    			'git_ensureSyncedBranch "' + buildStream + '"',
+                    			'git_mergeFromBranch "' + info.sourceStream + '"',
+                				'git push origin ' + buildStream,
+                    			// Remove git ignore file
+                    			'rm .gitignore > /dev/null || true',
+                    			'git rm .gitignore > /dev/null || true'
+                            ];
+                            Object.keys(info.submodules).forEach(function (path) {
+                                var targetPath = LIB.path.join(sourceStreamDirpath, path, "..");
+                                if (!LIB.fs.existsSync(targetPath)) {
+                                    LIB.fs.mkdirsSync(targetPath);
+                                }
+                    			commands = commands.concat([
+                    			    'rm -Rf "' + path.replace(/^\//, "") + '" || true',
+                    			    'echo "Clone ' + info.submodules[path].url + ' to ' + path.replace(/^\//, "") + '"',
+                    			    'git clone "' + info.submodules[path].url + '" "' + path.replace(/^\//, "") + '"',
+                    			    'pushd "' + path.replace(/^\//, "") + '" > /dev/null',
+                    			        'git checkout ' + info.submodules[path].ref,
+                    			        'rm -Rf .git',
+                    			    'popd > /dev/null'
+                    			]);
+                            });
+                            
+                            commands.push('git_commitChanges "Inlined submodule updates"');
+        
+                		    // TODO: Use pure nodejs solution for this.
+                    		return LIB.util.runCommands(commands, {
+                    		    cwd: sourceStreamDirpath,
+                    		    verbose: true
+                    		});
                         }
-            			commands = commands.concat([
-            			    'rm -Rf "' + path.replace(/^\//, "") + '" || true',
-            			    'echo "Clone ' + info.submodules[path].url + ' to ' + path.replace(/^\//, "") + '"',
-            			    'git clone "' + info.submodules[path].url + '" "' + path.replace(/^\//, "") + '"',
-            			    'pushd "' + path.replace(/^\//, "") + '" > /dev/null',
-            			        'git checkout ' + info.submodules[path].ref,
-            			        'rm -Rf .git',
-            			    'popd > /dev/null'
-            			]);
-                    });
-                    
-                    commands.push('git_commitChanges "Inlined submodule updates"');
-
-        		    // TODO: Use pure nodejs solution for this.
-            		return LIB.util.runCommands(commands, {
-            		    cwd: sourceStreamDirpath,
-            		    verbose: true
-            		});
-                }
-
-                function publishStream (branch) {
-                    return LIB.util.runCommands([
-                        'VERBOSE="1"',
-        				'. ' + LIB.path.join(__dirname, "packer.proto.sh"),
-        				'git push origin ' + branch
-                    ], {
-            		    cwd: sourceStreamDirpath,
-            		    verbose: true
-            		});
-                }
-
-                return mergeChanges().then(function () {
-
-                    return publishStream(buildStream);
-                });
+        
+                        function publishStream (branch) {
+                            return LIB.util.runCommands([
+                                'VERBOSE="1"',
+                				'. ' + LIB.path.join(__dirname, "packer.proto.sh"),
+                				'git push origin ' + branch
+                            ], {
+                    		    cwd: sourceStreamDirpath,
+                    		    verbose: true
+                    		});
+                        }
+        
+                        return mergeChanges().then(function () {
+        
+                            return publishStream(buildStream);
+                        });
+                    }
+            
+        
+                    return deriveNodePackBuildStream();
+                });                
             }
-    
-
-            return deriveNodePackBuildStream();
-        });
+        };
     };
 }
