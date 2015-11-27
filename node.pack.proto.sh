@@ -22,7 +22,7 @@ function init {
     }
     
     function node.pack.inline.source.stream.dirpath {
-        BO_setResult "$1" "$($NODE_PACK_SCRIPT_PATH --inline-source-stream-dirpath)"
+        BO_setResult "$1" "$($NODE_PACK_SCRIPT_PATH --inline-source-stream-dirpath --silent)"
     }
 
     function node.pack.dependencies.canUpload {
