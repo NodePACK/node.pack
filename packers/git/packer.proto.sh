@@ -86,8 +86,12 @@ function init {
 	    # Ensure current branch is synced to given remote branch
 	    git_getBranch "BRANCH"
 		BO_log "$VERBOSE" "Sync local branch '$BRANCH' to remote '$1' branch '$2' ..."
-
-
+	    git reset --hard
+	    git clean -df
+	    git fetch "$1" "$2" || true
+		git merge -X ours "$1/$2" -m "Merge upstream changes" || true
+	    git clean -df
+	    git push -f "$1" "$2"
 	}
 
 	function git_mergeFromSource {
