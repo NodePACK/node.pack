@@ -92,7 +92,7 @@ function init {
 	    git fetch "$1" "$2" || true
 		git merge -X ours "$1/$2" -m "Merge upstream changes" || true
 	    git clean -df
-	    git push "$1" "$BRANCH:$2"
+	    git push "$1" "$BRANCH:$2" --tags
 	}
 
 	function git_mergeFromSource {
