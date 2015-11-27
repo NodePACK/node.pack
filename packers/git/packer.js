@@ -277,7 +277,7 @@ exports.forLIB = function (LIB) {
                     			        'git checkout ' + info.submodules[path].ref,
                     			        'git submodule update --init --recursive --rebase || true',
                     			        'rm -Rf .git',
-                    			        'find . -name .git -type d -prune | while read d; do',
+                    			        'find . -name .git -prune | while read d; do',
                                         '  rm -Rf "$d"',
                                         'done',
                     			    'popd > /dev/null'
