@@ -25,5 +25,9 @@ function init {
         BO_setResult "$1" "$($NODE_PACK_SCRIPT_PATH --inline-source-stream-dirpath)"
     }
 
+    function node.pack.dependencies.canUpload {
+        BO_setResult "$1" "$($NODE_PACK_SCRIPT_PATH dependencies --canUpload --silent)"
+    }
+
 }
 init $@

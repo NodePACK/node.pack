@@ -26,6 +26,8 @@ module.exports = function (packageDirectory, limitToPack, mode) {
     function forEachConfiguredPack (handler) {
         return loadDescriptor(packageDirectory).then(function (descriptor) {
 
+            var result = null;
+
             // TODO: Take depends order into account.
             return LIB.Promise.all(Object.keys(descriptor["node.pack"].packs).map(function (packName) {
                 if (
@@ -41,8 +43,19 @@ module.exports = function (packageDirectory, limitToPack, mode) {
                         version: descriptor["version"]
                     }
                 });
-                return handler(packName, config);
-            }));
+                return handler(packName, config).then(function (_result) {
+                    if (
+                        _result !== null &&
+                        !limitToPack
+                    ) {
+                        throw new Error("Cannot call mode '" + mode + "' on pack '" + packName + "' as we are operating on multiple packs. You must specify a single pack.");
+                    }
+                    result = _result;
+                    return null;
+                });
+            })).then(function () {
+                return result;
+            });
         });    
     }
 
@@ -98,7 +111,8 @@ module.exports = function (packageDirectory, limitToPack, mode) {
             config = JSON.stringify(config, null, 4);
             var re = /\{\{(!)?(?:env|ENV)\.([^\}]+)\}\}/g;
             var m;
-            while (m = re.exec(config)) {
+            var originalConfig = config;
+            while (m = re.exec(originalConfig)) {
                 config = config.replace(
                     new RegExp(m[0], "g"),
                     process.env[m[2]] || ""
@@ -163,6 +177,8 @@ module.exports = function (packageDirectory, limitToPack, mode) {
                             if (!syncer) return;
                             return syncer.upload();
                         });
+                    }).then(function () {
+                        return null;
                     });
                 } else
                 if (mode === "unpack") {
@@ -186,12 +202,20 @@ module.exports = function (packageDirectory, limitToPack, mode) {
                         });
                     }).then(function () {
                         return packer.unpack();
+                    }).then(function () {
+                        return null;
                     });
                 } else
                 if (mode === "exists") {
                     return LIB.Promise.try(function () {
-                        if (!syncer) return false;
+                        if (!syncer) return null;
                         return syncer.exists();
+                    });
+                } else
+                if (mode === "canUpload") {
+                    return LIB.Promise.try(function () {
+                        if (!syncer) return null;
+                        return syncer.canUpload();
                     });
                 } else {
                     throw new Error("Mode '" + mode + "' not supported!");
@@ -238,7 +262,18 @@ if (require.main === module) {
             argv._[0] || "",
             "exists"
         ).then(function (exists) {
-            process.stdout.write(exists ? "1": "0");
+            process.stdout.write( (exists === null) ? "" : (exists ? "1": "0"));
+            process.exit(0);
+            return;
+        }).catch(error);
+    } else
+    if (argv["canUpload"]) {
+        module.exports(
+            process.cwd(),
+            argv._[0] || "",
+            "canUpload"
+        ).then(function (canUpload) {
+            process.stdout.write( (canUpload === null) ? "" : (canUpload ? "1": "0") );
             process.exit(0);
             return;
         }).catch(error);
