@@ -68,7 +68,8 @@ function init {
 
 	function git_ensureRemote {
 		BO_log "$VERBOSE" "Ensure remote '$1' pointing to '$2' ..."
-		git remote set-url "$1" "$2"
+		git remote rm "$1"
+		git remote add "$1" "$2"
 	}
 
 	function git_ensureSyncedBranch {
