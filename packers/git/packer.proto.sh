@@ -128,7 +128,7 @@ function init {
 		BO_log "$VERBOSE" "Removing submodule '$1' from working tree '$(pwd)' ..."
 		# @source http://stackoverflow.com/a/16162000/330439
 		rm -Rf "$1" || true
-		git submodule deinit "$1"    || true 
+		git submodule deinit "$1" || true 
 		git rm "$1" || true
 		git rm --cached "$1" || true
         git add -A || true
