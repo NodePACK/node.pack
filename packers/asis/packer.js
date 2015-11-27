@@ -64,10 +64,15 @@ exports.forLIB = function (LIB) {
                 });
             },
             unpack: function () {
-
-console.error("UNPACK", targetArchivePath);
-
-                return LIB.Promise.resolve();
+                if (LIB.VERBOSE) console.log("Unpacking archive from '" + targetArchivePath + "' to '" + pack.getSourceDirectory() + "' ...");
+        		return LIB.util.runCommands([
+        		    'tar -xf --keep-old-files "' + targetArchivePath + '" -C "' + pack.getSourceDirectory() + '"'
+        		], {
+        		    cwd: pack.getSourceDirectory()
+        		}).then(function () {
+                    if (LIB.VERBOSE) console.log("Unpacked archive from '" + targetArchivePath + "' to '" + pack.getSourceDirectory() + "'!");
+                    return null;
+        		});
             }
         };
     };
