@@ -277,14 +277,9 @@ exports.forLIB = function (LIB) {
                     			        'git checkout ' + info.submodules[path].ref,
                     			        'git submodule update --init --recursive --rebase || true',
                     			        'rm -Rf .git',
-                    			        // TODO: Do this more elegantly
-                    			        'rm -Rf */.git || true',
-                    			        'rm -Rf */*/.git || true',
-                    			        'rm -Rf */*/*/.git || true',
-                    			        'rm -Rf */*/*/*/.git || true',
-                    			        'rm -Rf */*/*/*/*/.git || true',
-                    			        'rm -Rf */*/*/*/*/*/.git || true',
-                    			        'rm -Rf */*/*/*/*/*/*/.git || true',
+                    			        'find . -name .git -type d -prune | while read d; do',
+                                        '  rm -Rf "$d"',
+                                        'done',
                     			    'popd > /dev/null'
                     			]);
                             });
