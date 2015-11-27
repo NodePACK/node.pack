@@ -66,6 +66,11 @@ function init {
 	    git clean -df
 	}
 
+	function git_ensureRemote {
+		BO_log "$VERBOSE" "Ensure remote '$1' pointing to '$2' ..."
+		git remote set-url "$1" "$2"
+	}
+
 	function git_ensureSyncedBranch {
 	    # Ensure deploy repo/branch is clean and up to date
 		BO_log "$VERBOSE" "Reset and update '$(pwd)' repo to branch '$1' ..."
@@ -75,6 +80,14 @@ function init {
 	    git fetch origin "$1" || true
 		git merge -X theirs "origin/$1" -m "Merge upstream changes" || true
 	    git clean -df
+	}
+
+	function git_ensureSyncedRemoteBranch {
+	    # Ensure current branch is synced to given remote branch
+	    git_getBranch "BRANCH"
+		BO_log "$VERBOSE" "Sync local branch '$BRANCH' to remote '$1' branch '$2' ..."
+
+
 	}
 
 	function git_mergeFromSource {
