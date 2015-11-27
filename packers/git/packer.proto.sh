@@ -68,7 +68,7 @@ function init {
 
 	function git_ensureRemote {
 		BO_log "$VERBOSE" "Ensure remote '$1' pointing to '$2' ..."
-		git remote rm "$1" || true
+		git remote rm "$1" > /dev/null || true
 		git remote add "$1" "$2"
 	}
 
