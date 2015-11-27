@@ -63,7 +63,6 @@ module.exports = function (packageDirectory, limitToPack, mode) {
         return loadAdapterModule._instances[relpath];
     }
 
-
     var Pack = function (packName, packConfig) {
         var self = this;
 
@@ -105,7 +104,9 @@ module.exports = function (packageDirectory, limitToPack, mode) {
                     process.env[m[2]] || ""
                 );
             }
-            return JSON.parse(config);
+            return LIB._.merge({
+                aspect: packConfig.aspect || null
+            }, JSON.parse(config));
         }
 
         self.getPackerConfig = function () {
@@ -173,29 +174,25 @@ module.exports = function (packageDirectory, limitToPack, mode) {
                             LIB.log("Skip running syncer for pack '" + packName + "' as local packs already exist.");
                             return;
                         }
-                        return syncer.download();
+                        return LIB.Promise.try(function () {
+                            if (!syncer) return false;
+                            return syncer.exists();
+                        }).then(function (exists) {
+                            if (!exists) {
+                                LIB.log("Skip running syncer for pack '" + packName + "' as there is no remote archive!");
+                                throw new Error("There is no remote archive we can download found!");
+                            }
+                            return syncer.download();
+                        });
                     }).then(function () {
-
-console.log("TODO: extract!");
-
-
+                        return packer.unpack();
                     });
-/*
-                    return existsRemote().then(function (exists) {
-                        if (!exists) {
-                            LIB.log("Skip running syncer and unpack '" + packConfig.packer.module + "' for pack '" + packName + "' as remote pack does not exist.");
-                            return;
-                        }
-                        return ensureLocal().then(function (exists) {
-*/                        
-                        
-    
-                    
-    console.log("UNPACK!");
-    
-    
-//                    });
-    
+                } else
+                if (mode === "exists") {
+                    return LIB.Promise.try(function () {
+                        if (!syncer) return false;
+                        return syncer.exists();
+                    });
                 } else {
                     throw new Error("Mode '" + mode + "' not supported!");
                 }
@@ -216,11 +213,16 @@ if (require.main === module) {
 
     var argv = LIB.minimist(process.argv.slice(2));
 
+    if (argv["silent"]) {
+        process.env.VERBOSE = "";
+        LIB.VERBOSE = false;
+    } else
     if (argv["verbose"]) {
         process.env.VERBOSE = "1";
         LIB.VERBOSE = true;
     }
 
+    // TODO: Refactor this option to work like `exists` below.
     if (argv["inline-source-stream-dirpath"]) {
         loadDescriptor(process.cwd()).then(function (descriptor) {
             process.stdout.write(LIB.path.join(process.cwd(), descriptor["node.pack"].packDirectory, [
@@ -228,7 +230,18 @@ if (require.main === module) {
                 "inline",
                 "source.stream"
             ].join("~")));
-        }).catch(error)
+        }).catch(error);
+    } else
+    if (argv["exists"]) {
+        module.exports(
+            process.cwd(),
+            argv._[0] || "",
+            "exists"
+        ).then(function (exists) {
+            process.stdout.write(exists ? "1": "0");
+            process.exit(0);
+            return;
+        }).catch(error);
     } else {
         module.exports(
             process.cwd(),

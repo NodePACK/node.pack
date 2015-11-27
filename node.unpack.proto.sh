@@ -21,5 +21,9 @@ function init {
         BO_format "$VERBOSE" "FOOTER"
     }
 
+    function node.unpack.dependencies.exists {
+        BO_setResult "$1" "$($NODE_PACK_SCRIPT_PATH dependencies --exists --silent)"
+    }
+
 }
 init $@

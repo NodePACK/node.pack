@@ -62,6 +62,12 @@ exports.forLIB = function (LIB) {
                 		});
                     });
                 });
+            },
+            unpack: function () {
+
+console.error("UNPACK", targetArchivePath);
+
+                return LIB.Promise.resolve();
             }
         };
     };

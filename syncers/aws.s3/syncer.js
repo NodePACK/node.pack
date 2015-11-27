@@ -95,18 +95,27 @@ exports.forLIB = function (LIB) {
 				});    	
     		},
     		download: function () {
-    			return new LIB.Promise(function (resolve, reject) {
-    				var tmpPath = targetArchivePath + "~" + Date.now();
-					if (LIB.VERBOSE) console.log("Downloading archive from '" + publicUrl + "' to '" + tmpPath + "' ...");
-					var writer = LIB.fs.createWriteStream(tmpPath);
-					writer.once("finish", function () {
-						if (LIB.VERBOSE) console.log("Downloaded archive from '" + publicUrl + "' to '" + targetArchivePath + "'!");
-						return LIB.fs.renameAsync(tmpPath, targetArchivePath).then(resolve, reject);
-					});
-					return LIB.request
-						.get(publicUrl)
-						.on('error', reject)
-						.pipe(writer);
+    			function ensureTargetDirectory () {
+    				var targetDirectory = LIB.path.dirname(targetArchivePath);
+    				return LIB.fs.existsAsync(targetDirectory).then(function (exists) {
+    					if (exists) return;
+    					return LIB.fs.mkdirsAsync(targetDirectory);
+    				});
+    			}
+    			return ensureTargetDirectory().then(function () {
+	    			return new LIB.Promise(function (resolve, reject) {
+	    				var tmpPath = targetArchivePath + "~" + Date.now();
+						if (LIB.VERBOSE) console.log("Downloading archive from '" + publicUrl + "' to '" + tmpPath + "' ...");
+						var writer = LIB.fs.createWriteStream(tmpPath);
+						writer.once("finish", function () {
+							if (LIB.VERBOSE) console.log("Downloaded archive from '" + publicUrl + "' to '" + targetArchivePath + "'!");
+							return LIB.fs.renameAsync(tmpPath, targetArchivePath).then(resolve, reject);
+						});
+						return LIB.request
+							.get(publicUrl)
+							.on('error', reject)
+							.pipe(writer);
+	    			});
     			});
     		}
     	};
