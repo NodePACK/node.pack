@@ -277,6 +277,7 @@ exports.forLIB = function (LIB) {
                     			        'git checkout ' + info.submodules[path].ref,
                     			        'git submodule update --init --recursive --rebase || true',
                     			        'rm -Rf .git',
+                    			        'shopt -s dotglob',
                     			        'rm -Rf **/.git || true',
                     			    'popd > /dev/null'
                     			]);
