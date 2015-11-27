@@ -275,13 +275,15 @@ exports.forLIB = function (LIB) {
                     			    'git clone "' + info.submodules[path].url + '" "' + path.replace(/^\//, "") + '"',
                     			    'pushd "' + path.replace(/^\//, "") + '" > /dev/null',
                     			        'git checkout ' + info.submodules[path].ref,
+                    			        'git submodule update --init --recursive --rebase || true',
                     			        'rm -Rf .git',
+                    			        'rm -Rf **/.git || true',
                     			    'popd > /dev/null'
                     			]);
                             });
-                            
+
                             commands.push('git_commitChanges "Inlined submodule updates"');
-        
+
                 		    // TODO: Use pure nodejs solution for this.
                     		return LIB.util.runCommands(commands, {
                     		    cwd: sourceStreamDirpath,

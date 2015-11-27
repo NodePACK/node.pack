@@ -68,7 +68,7 @@ function init {
 
 	function git_ensureRemote {
 		BO_log "$VERBOSE" "Ensure remote '$1' pointing to '$2' ..."
-		git remote rm "$1" > /dev/null || true
+		git remote rm "$1" 2> /dev/null || true
 		git remote add "$1" "$2"
 	}
 
@@ -92,7 +92,7 @@ function init {
 	    git fetch "$1" "$2" || true
 		git merge -X ours "$1/$2" -m "Merge upstream changes" || true
 	    git clean -df
-	    git push "$1" "$2"
+	    git push "$1" "$BRANCH:$2"
 	}
 
 	function git_mergeFromSource {
