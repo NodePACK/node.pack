@@ -241,8 +241,6 @@ if (require.main === module) {
 
     var argv = LIB.minimist(process.argv.slice(2));
 
-    LIB.log("argv:", argv);
-
     if (argv["silent"]) {
         process.env.VERBOSE = "";
         LIB.VERBOSE = false;
@@ -251,6 +249,8 @@ if (require.main === module) {
         process.env.VERBOSE = "1";
         LIB.VERBOSE = true;
     }
+
+    LIB.log("argv:", argv);
 
     // TODO: Refactor this option to work like `exists` below.
     if (argv["inline-source-stream-dirpath"]) {
