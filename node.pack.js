@@ -23,6 +23,10 @@ function loadDescriptor (packageDirectory) {
 
 module.exports = function (packageDirectory, limitToPack, mode) {
 
+    LIB.log("packageDirectory:", packageDirectory);
+    LIB.log("limitToPack:", limitToPack);
+    LIB.log("mode:", mode);
+
     function forEachConfiguredPack (handler) {
         return loadDescriptor(packageDirectory).then(function (descriptor) {
 
@@ -236,6 +240,8 @@ if (require.main === module) {
     }
 
     var argv = LIB.minimist(process.argv.slice(2));
+
+    LIB.log("argv:", argv);
 
     if (argv["silent"]) {
         process.env.VERBOSE = "";
