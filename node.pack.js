@@ -16,6 +16,8 @@ function loadDescriptor (packageDirectory) {
 
         descriptor["node.pack"].packDirectory = descriptor["node.pack"].packDirectory || ".packs";
 
+        LIB.log("Descriptor loaded from '" + path + "':", descriptor["node.pack"]);
+
         return descriptor;
     });
 }
@@ -32,12 +34,16 @@ module.exports = function (packageDirectory, limitToPack, mode) {
 
             var result = null;
 
+            var actedPackCount = 0;
+
             // TODO: Take depends order into account.
             return LIB.Promise.all(Object.keys(descriptor["node.pack"].packs).map(function (packName) {
                 if (
                     limitToPack &&
                     packName !== limitToPack
                 ) return;
+                
+                actedPackCount += 1;
 
                 var config = LIB._.clone(descriptor["node.pack"].packs[packName]);
                 LIB._.assign(config, {
@@ -58,6 +64,9 @@ module.exports = function (packageDirectory, limitToPack, mode) {
                     return null;
                 });
             })).then(function () {
+                if (actedPackCount === 0) {
+                    LIB.log("No packs acted on!");
+                }
                 return result;
             });
         });    
@@ -245,7 +254,7 @@ if (require.main === module) {
         process.env.VERBOSE = "";
         LIB.VERBOSE = false;
     } else
-    if (argv["verbose"]) {
+    if (argv["verbose"] || argv["v"]) {
         process.env.VERBOSE = "1";
         LIB.VERBOSE = true;
     }
