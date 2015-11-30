@@ -146,6 +146,7 @@ exports.forLIB = function (LIB) {
         				'git_getTag "TAG"',
         				'getRemoteUrl "ORIGIN_URL" "origin"',
         				'SOURCE_STREAM="$BRANCH.nodepack"',
+        				'echo "TAG: $TAG"',
         				'echo "BRANCH: $BRANCH"',
         				'echo "SOURCE_STREAM: $SOURCE_STREAM"',
         				'echo "Packing branch \'$BRANCH\' at tag \'$TAG\' from origin \'$ORIGIN_URL\'"',
@@ -175,6 +176,10 @@ exports.forLIB = function (LIB) {
             		        if (m) {
             		            info.branch = m[1];
             		        }
+            		        m = line.match(/^TAG: (\S+)$/);
+            		        if (m) {
+            		            info.tag = m[1];
+            		        }
             		        m = line.match(/^SOURCE_STREAM: (\S+)$/);
             		        if (m) {
             		            info.sourceStream = m[1];
@@ -184,14 +189,23 @@ exports.forLIB = function (LIB) {
                         return info;
             		});
                 }
-    
-                function writeDescriptor () {
-                    return LIB.fs.outputFileAsync(
-                        LIB.path.join(sourceStreamDirpath, "node.pack.json"),
-                        LIB.CJSON({
-                            "submodules": submodules
-                        }, null, 4)
-                    ).then(function () {
+
+                function writeDescriptor (tag) {
+                    return LIB.fs.readJsonAsync(LIB.path.join(sourceStreamDirpath, "package.json")).then(function (descriptor) {
+                        descriptor.version = tag.replace(/^v/, "");
+                        // TODO: Instead of over-writing version in descriptor add support for an overlay file for package.json.    
+                        return LIB.fs.outputFileAsync(
+                            LIB.path.join(sourceStreamDirpath, "package.json"),
+                            JSON.stringify(descriptor, null, 4)
+                        );
+                    }).then(function () {
+                        return LIB.fs.outputFileAsync(
+                            LIB.path.join(sourceStreamDirpath, "node.pack.json"),
+                            LIB.CJSON({
+                                "submodules": submodules
+                            }, null, 4)
+                        );
+                    }).then(function () {
                         return LIB.util.runCommands([
                             'VERBOSE="1"',
             				'. ' + LIB.path.join(__dirname, "packer.proto.sh"),
@@ -200,9 +214,10 @@ exports.forLIB = function (LIB) {
                 		    cwd: sourceStreamDirpath,
                 		    verbose: true
                 		});
+                		// TODO: If commit fails with conflict, fix conflict automatically and run again.
                     });
                 }
-    
+
                 function publishStream (branch) {
                     return LIB.util.runCommands([
                         'VERBOSE="1"',
@@ -216,7 +231,7 @@ exports.forLIB = function (LIB) {
     
                 return mergeChanges().then(function (info) {
     
-                    return writeDescriptor().then(function () {
+                    return writeDescriptor(info.tag).then(function () {
     
                         return publishStream(info.sourceStream).then(function () {
 

@@ -16,7 +16,7 @@ function init {
     function node.unpack {
         BO_format "$VERBOSE" "HEADER" "NodeUnPACK workspace directory '$(pwd)'"
 
-        "$NODE_PACK_SCRIPT_PATH" --unpack $@
+        "$NODE_PACK_SCRIPT_PATH" $@ --unpack
 
         BO_format "$VERBOSE" "FOOTER"
     }
