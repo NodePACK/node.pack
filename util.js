@@ -13,6 +13,7 @@ exports.forLib = function (LIB) {
 				console.log("Running commands:", commands);
 			}
 		    var proc = LIB.child_process.spawn("bash", [
+		        "-e",
 		        "-s"
 		    ], options);
 		    proc.on("error", function(err) {
