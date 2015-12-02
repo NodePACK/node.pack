@@ -144,7 +144,7 @@ exports.forLIB = function (LIB) {
         				'git_exitOnDirtyWorking',
         				'git_getBranch "BRANCH"',
         				'git_getTag "TAG"',
-        				'getRemoteUrl "ORIGIN_URL" "origin"',
+        				'git_getRemoteUrl "ORIGIN_URL" "origin"',
         				'SOURCE_STREAM="$BRANCH.nodepack"',
         				'echo "TAG: $TAG"',
         				'echo "BRANCH: $BRANCH"',

@@ -49,7 +49,7 @@ function init {
 		BO_setResult "$1" "$(git describe --tags)"
 	}
 	
-	function getRemoteUrl {
+	function git_getRemoteUrl {
 	    BO_setResult "$1" `git config --get remote.$2.url`
 	}
 
@@ -122,6 +122,14 @@ function init {
 	function git_mergeFromBranch {
 		BO_log "$VERBOSE" "Merge changes from branch '$1'"
 		git merge "$1" -m "merge changes from branch '$1'"
+	}
+
+	function git_hasSubmodule {
+		BO_log "$VERBOSE" "Checking if '$PWD' has submodule '$1' ..."
+	    if [[ $(git config --file=.gitmodules --get-regexp ^^submodule\.$1\.path$ | cut -d " " -f 2 | tail -n1) != "" ]]; then
+	    	return 0;
+	   	fi
+	   	return 1;
 	}
 
 	function git_removeSubmodule {
