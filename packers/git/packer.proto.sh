@@ -49,6 +49,14 @@ function init {
 		BO_setResult "$1" "$(git describe --tags)"
 	}
 	
+	function git_hasTags {
+		BO_log "$VERBOSE" "Checking if '$PWD' has tags ..."
+	    if [[ $(git tag | tail -n1) != "" ]]; then
+	    	return 0;
+	   	fi
+	   	return 1;
+	}
+
 	function git_getRemoteUrl {
 	    BO_setResult "$1" `git config --get remote.$2.url`
 	}
