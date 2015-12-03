@@ -107,7 +107,8 @@ module.exports = function (packageDirectory, limitToPack, mode) {
         self.getFilepath = function (aspect, extension) {
             return LIB.path.join(packConfig.packDirectory, [
                 packConfig.package.name,
-                packConfig.package.version,
+                // TODO: Optionally just use major version or include path version?
+                packConfig.package.version.split(".").slice(0, 2).join("."),
                 packName,
                 process.platform,
                 process.arch,
