@@ -97,7 +97,7 @@ function init {
 	    if git_hasRemoteBranch "origin" "$1" ; then
 		    git fetch origin "$1" || true
 		    function fixConflicts {
-				# For all unmerged files that "they" deleted conflicts we remove the files and commit
+				# For all unmerged files that they deleted conflicts we remove the files and commit
 				for f in $(git diff --name-only --diff-filter=UD); do
 					git rm "$f"
 				done
@@ -126,11 +126,19 @@ function init {
 	    # $2: "$BRANCH"
 	    # $3: "$DEPLOY_TAG"
 	    # $4: "$DEPLOY_BRANCH"
-		BO_log "$VERBOSE" "Merged changes for branch '$2' resulting in commit '$3' on stream '$4' from '$1' to '$(pwd)'"
+		BO_log "$VERBOSE" "Merge changes for branch '$2' resulting in commit '$3' on stream '$4' from '$1' to '$(pwd)'"
 		git remote add source "$1/.git" 2> /dev/null || true
 		git fetch source
-		git merge -X theirs "source/$2" -m "changes for branch '$2' resulting in commit '$3' on stream '$4'"
-		BO_log "$VERBOSE" "done: Merged changes for branch '$2' resulting in commit '$3' on stream '$4' from '$1' to '$(pwd)'"
+		local msg="changes for branch '$2' resulting in commit '$3' on stream '$4'"
+	    function fixConflicts {
+			# For all unmerged files that we deleted conflicts we remove the files and commit
+			for f in $(git diff --name-only --diff-filter=UD); do
+				git rm "$f"
+			done
+			git commit -m "$msg & fix conflicts"
+	    }
+		git merge -X theirs "source/$2" -m "$msg" || fixConflicts
+		BO_log "$VERBOSE" "done: Merge changes for branch '$2' resulting in commit '$3' on stream '$4' from '$1' to '$(pwd)'"
 
         function disabled {
 			# @source http://stackoverflow.com/a/27338013/330439
