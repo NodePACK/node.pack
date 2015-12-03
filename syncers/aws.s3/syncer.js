@@ -19,8 +19,6 @@ exports.forLIB = function (LIB) {
 
 				// @see http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html
 
-			    LIB.assert.equal(typeof config.aws.iamUserName, "string");
-			    LIB.assert.equal(!!config.aws.iamUserName, true);
 			    LIB.assert.equal(typeof config.aws.accessKeyId, "string");
 			    LIB.assert.equal(!!config.aws.accessKeyId, true);
 			    LIB.assert.equal(typeof config.aws.secretAccessKey, "string");

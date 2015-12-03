@@ -80,15 +80,33 @@ function init {
 		git remote add "$1" "$2"
 	}
 
+	function git_hasRemoteBranch {
+		BO_log "$VERBOSE" "Checking if '$PWD' has remote branch '$2' for remote '$1' ..."
+	    if [[ $(git ls-remote --heads "$1" | grep "\/$2$" | tail -n1) != "" ]]; then
+	    	return 0;
+	   	fi
+	   	return 1;
+	}
+
 	function git_ensureSyncedBranch {
 	    # Ensure deploy repo/branch is clean and up to date
 		BO_log "$VERBOSE" "Reset and update '$(pwd)' repo to branch '$1' ..."
 	    git reset --hard
 	    git checkout -b "$1" 2> /dev/null || git checkout "$1"
 	    git clean -df
-	    git fetch origin "$1" || true
-		git merge -X theirs "origin/$1" -m "Merge upstream changes" || true
-	    git clean -df
+	    if git_hasRemoteBranch "origin" "$1" ; then
+		    git fetch origin "$1" || true
+		    function fixConflicts {
+				# For all unmerged files that "they" deleted conflicts we remove the files and commit
+				for f in $(git diff --name-only --diff-filter=UD); do
+					git rm "$f"
+				done
+				git commit -m "Merged upstream changes & fix conflicts"
+		    }
+			git merge -X theirs "origin/$1" -m "Merged upstream changes" || fixConflicts
+		    git clean -df
+		fi
+		BO_log "$VERBOSE" "done: Reset and updated '$(pwd)' repo to branch '$1'"
 	}
 
 	function git_ensureSyncedRemoteBranch {
@@ -108,10 +126,11 @@ function init {
 	    # $2: "$BRANCH"
 	    # $3: "$DEPLOY_TAG"
 	    # $4: "$DEPLOY_BRANCH"
-		BO_log "$VERBOSE" "Merge changes for branch '$2' resulting in commit '$3' on stream '$4' from '$1' to '$(pwd)'"
+		BO_log "$VERBOSE" "Merged changes for branch '$2' resulting in commit '$3' on stream '$4' from '$1' to '$(pwd)'"
 		git remote add source "$1/.git" 2> /dev/null || true
 		git fetch source
 		git merge -X theirs "source/$2" -m "changes for branch '$2' resulting in commit '$3' on stream '$4'"
+		BO_log "$VERBOSE" "done: Merged changes for branch '$2' resulting in commit '$3' on stream '$4' from '$1' to '$(pwd)'"
 
         function disabled {
 			# @source http://stackoverflow.com/a/27338013/330439

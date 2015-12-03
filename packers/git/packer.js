@@ -134,9 +134,9 @@ exports.forLIB = function (LIB) {
                     return getSubmoduleStatus(submodules);
                 });
             }
-    
+
             function deriveNodePackSourceStream (submodules) {
-    
+
                 function mergeChanges () {
                     var commands = [
         			    'VERBOSE="1"',
@@ -158,15 +158,17 @@ exports.forLIB = function (LIB) {
                 			'git_ensureSyncedBranch "$SOURCE_STREAM"',
                 			'git_mergeFromSource "' + rootPath + '" "$BRANCH" "$TAG" "$SOURCE_STREAM"',
                     ];
+                    commands.push('echo "Removing submodules ..."');
                     Object.keys(submodules).forEach(function (path) {
             			commands = commands.concat([
             			    'git_removeSubmodule "' + path.replace(/^\//, "") + '"'
             			]);
             		});
+                    commands.push('echo "Submodules removed"');
         			commands = commands.concat([
                 		'popd > /dev/null'
                 	]);
-        
+
         		    // TODO: Use pure nodejs solution for this.
             		return LIB.util.runCommands(commands, {
             		    cwd: rootPath,
