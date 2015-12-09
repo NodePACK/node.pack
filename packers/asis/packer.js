@@ -66,17 +66,8 @@ exports.forLIB = function (LIB) {
             unpack: function () {
                 if (LIB.VERBOSE) console.log("Unpacking archive from '" + targetArchivePath + "' to '" + pack.getSourceDirectory() + "' ...");
         		return LIB.util.runCommands([
-        		    // TODO: Ensure GNU tar is provisioned using a `bash.origin` plugin.
-        		    'if which gtar; then',
-        		        // Specifically use GNU tar if available (OSX)
-            		'   gtar --skip-old-files -xf "' + targetArchivePath + '" -C "' + pack.getSourceDirectory() + '"',
-        		    'elif [[ $(tar --version) =~ "GNU" ]]; then',
-        		        // The `tar` command that is installed is GNU tar.
-            		'   tar --skip-old-files -xf "' + targetArchivePath + '" -C "' + pack.getSourceDirectory() + '"',
-            		'else',
-            		'   echo "Error: GNU \'tar\' (or \'gtar\') not found! If you are on OSX you can install it with \'brew install gnu-tar\'"',
-            		'   exit 1',
-        		    'fi'
+    				'. ' + LIB.path.join(__dirname, "packer.proto.sh"),
+    				'tar_extractToIgnoreExisting "' + targetArchivePath + '" "' + pack.getSourceDirectory() + '"'
         		], {
         		    cwd: pack.getSourceDirectory()
         		}).then(function () {
