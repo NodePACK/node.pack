@@ -55,11 +55,18 @@ exports.forLIB = function (LIB) {
                         // Create archive
                         commands.push('rm -Rf "' + targetArchivePath + '" || true');
                         commands.push('cd "' + targetBasePath + '"');
-                        commands.push('tar czf "' + targetArchivePath + '" *');
-            
-                		return LIB.util.runCommands(commands, {
-                		    cwd: pack.getSourceDirectory()
-                		});
+                        commands.push('tar czf "' + targetArchivePath + '" --exclude-from="' + targetArchivePath + '.exclude" *');
+                        commands.push('rm -f "' + targetArchivePath + '.exclude"');
+
+                        return LIB.fs.outputFileAsync(
+                            targetArchivePath + '.exclude',
+                            (pack.getPackerConfig().ignoreRules || []).join("\n"),
+                            "utf8"
+                        ).then(function () {
+                    		return LIB.util.runCommands(commands, {
+                    		    cwd: pack.getSourceDirectory()
+                    		});
+                        });
                     });
                 });
             },
